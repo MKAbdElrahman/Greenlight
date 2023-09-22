@@ -21,6 +21,8 @@ type application struct {
 	logger *log.Logger
 }
 
+type envelope map[string]interface{}
+
 func main() {
 	var cfg config
 
