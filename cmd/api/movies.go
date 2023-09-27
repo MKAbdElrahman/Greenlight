@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"greenlight.mkabdelrahman.net/internal/data"
+	"greenlight.mkabdelrahman.net/internal/jsonparser"
 )
 
 func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Request) {
@@ -17,9 +18,10 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 		Genres  []string `json:"genres"`
 	}
 
-	err := app.readJSON(r, &input)
+	err := jsonparser.ReadJSON(w, r, &input)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
+		return
 	}
 	fmt.Fprintf(w, "%+v\n", input)
 }
@@ -41,9 +43,10 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Encode the struct to JSON and send it as the HTTP response.
-	err = app.writeJSON(w, http.StatusOK, envelope{"movie": movie}, nil)
+	err = jsonparser.WriteJSON(w, http.StatusOK, envelope{"movie": movie}, nil)
 	if err != nil {
 		app.logger.Println(err)
 		app.serverErrorResponse(w, r, err)
+
 	}
 }

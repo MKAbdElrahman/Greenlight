@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"net/http"
+
+	"greenlight.mkabdelrahman.net/internal/jsonparser"
 )
 
 func (app *application) logError(r *http.Request, err error) {
@@ -13,7 +15,7 @@ func (app *application) errorResponse(w http.ResponseWriter, r *http.Request, st
 
 	env := envelope{"error": message}
 
-	err := app.writeJSON(w, status, env, nil)
+	err := jsonparser.WriteJSON(w, status, env, nil)
 
 	if err != nil {
 		app.logError(r, err)
