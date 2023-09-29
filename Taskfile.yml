@@ -76,3 +76,9 @@ tasks:
     cmds:
       - rm -rf $BIN_DIR
       - rm -rf $COVERAGE_REPORTS_DIR  
+
+  help:
+    desc: show config flags
+    cmds:
+      - $BIN_DIR/$APP_NAME -help
+    deps: [build]

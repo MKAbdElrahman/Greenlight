@@ -1,37 +1,31 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	_ "github.com/lib/pq"
+	"greenlight.mkabdelrahman.net/internal/dbutil"
 )
 
 const version = "1.0.0"
 
-type config struct {
-	port int
-	env  string
-}
-
-type application struct {
-	config config
-	logger *log.Logger
-}
-
-type envelope map[string]interface{}
-
 func main() {
-	var cfg config
-
-	// Read Flags
-	flag.IntVar(&cfg.port, "port", 4000, "API server port")
-	flag.StringVar(&cfg.env, "env", "development", "Environment(development|staging|production)")
-	flag.Parse()
+	cfg := readConfigFromFlags()
 
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+
+	db, err := dbutil.NewDBConnection(cfg.db)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	defer db.Close()
+
+	logger.Printf("database connection pool established")
 
 	app := &application{
 		config: cfg,
@@ -50,6 +44,6 @@ func main() {
 	}
 
 	logger.Printf("starting %s server on %s", cfg.env, srv.Addr)
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	log.Fatal(err)
 }
