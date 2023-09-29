@@ -1,0 +1,118 @@
+name: CI Checks
+
+on: push
+jobs:
+  code-style-enforcement:
+    name: Format Go Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Task
+        uses: arduino/setup-task@v1
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v3
+        with:
+          go-version: ^1.21
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+      - name: Check Format
+        run: task check-format
+  static-code-analysis:
+    name: Run Linters
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Task
+        uses: arduino/setup-task@v1
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v3
+        with:
+          go-version: ^1.21
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+      - name: Check Format
+        run: task lint
+  test:
+    name: Test Application
+    runs-on: ubuntu-latest
+    needs:
+      - code-style-enforcement
+      - static-code-analysis
+    steps:
+      - name: Install Task
+        uses: arduino/setup-task@v1
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v3
+        with:
+          go-version: ^1.21
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+      - name: Run Test
+        run: task test
+      # - name: Coverage Check
+      #   run: task coverage-check
+      - name: Generate Report
+        run: task generate-coverage-report
+
+      - name: Archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: reports
+          path: reports
+
+  build:
+    name: Build App
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Install Task
+        uses: arduino/setup-task@v1
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v3
+        with:
+          go-version: ^1.21
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+      - name: Build
+        run: task build
+      - name: Copy Files
+        run: |
+          mkdir artifacts
+          cp ./bin/api artifacts/.
+      - name: Archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: api
+          path: artifacts
+
+  deliver:
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Download binary
+        uses: actions/download-artifact@v3
+        with:
+          name: api
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Still in experimentation phase
+          draft: true
+          prerelease: true
+      - name: Upload Release Binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: api
+          asset_name: api
+          asset_content_type: application/octet-stream
