@@ -10,30 +10,25 @@ import (
 	"greenlight.mkabdelrahman.net/internal/validator"
 )
 
+type movieDataFromUser struct {
+	Title   string       `json:"title"`
+	Year    int32        `json:"year"`
+	Runtime data.Runtime `json:"runtime"`
+	Genres  []string     `json:"genres"`
+}
+
 func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Request) {
+	// parse
 
-	var input struct {
-		Title   string       `json:"title"`
-		Year    int32        `json:"year"`
-		Runtime data.Runtime `json:"runtime"`
-		Genres  []string     `json:"genres"`
-	}
-
-	err := jsonparser.ReadJSON(w, r, &input)
+	input, err := readJSONFromRequest(w, r)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
-
-	movie := &data.Movie{
-		Title:   input.Title,
-		Year:    input.Year,
-		Runtime: input.Runtime,
-		Genres:  input.Genres,
-	}
-	v := validator.New()
-	if data.ValidateMovie(v, movie); !v.IsValid() {
-		app.failedValidationResponse(w, r, v.Errors)
+	movie := createMovieFromInput(input)
+	// validate
+	if err := app.validateMovie(w, r, movie); err != nil {
+		app.failedValidationResponse(w, r, err)
 		return
 	}
 
@@ -42,12 +37,38 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 		app.serverErrorResponse(w, r, err)
 		return
 	}
+	app.respondWithCreatedMovie(w, r, movie)
+}
 
+func readJSONFromRequest(w http.ResponseWriter, r *http.Request) (*movieDataFromUser, error) {
+	var input movieDataFromUser
+	err := jsonparser.ReadJSON(w, r, &input)
+	return &input, err
+}
+
+func createMovieFromInput(input *movieDataFromUser) *data.Movie {
+	return &data.Movie{
+		Title:   input.Title,
+		Year:    input.Year,
+		Runtime: input.Runtime,
+		Genres:  input.Genres,
+	}
+}
+
+func (app *application) validateMovie(w http.ResponseWriter, r *http.Request, movie *data.Movie) map[string]string {
+	v := validator.New()
+	if data.ValidateMovie(v, movie); !v.IsValid() {
+		return v.Errors
+
+	}
+	return nil
+}
+
+func (app *application) respondWithCreatedMovie(w http.ResponseWriter, r *http.Request, movie *data.Movie) {
 	headers := make(http.Header)
 	headers.Set("Location", fmt.Sprintf("/v1/movies/%d", movie.ID))
 
-	err = jsonparser.WriteJSON(w, http.StatusCreated, envelope{"movie": movie}, headers)
-
+	err := jsonparser.WriteJSON(w, http.StatusCreated, envelope{"movie": movie}, headers)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
