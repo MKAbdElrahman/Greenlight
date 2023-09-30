@@ -8,6 +8,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"greenlight.mkabdelrahman.net/internal/data"
 	"greenlight.mkabdelrahman.net/internal/dbutil"
 )
 
@@ -30,6 +31,7 @@ func main() {
 	app := &application{
 		config: cfg,
 		logger: logger,
+		models: data.NewModels(db),
 	}
 
 	mux := http.NewServeMux()
