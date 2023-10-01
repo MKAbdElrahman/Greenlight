@@ -11,10 +11,10 @@ import (
 )
 
 type movieDataFromUser struct {
-	Title   string       `json:"title"`
-	Year    int32        `json:"year"`
-	Runtime data.Runtime `json:"runtime"`
-	Genres  []string     `json:"genres"`
+	Title   *string       `json:"title"`
+	Year    *int32        `json:"year"`
+	Runtime *data.Runtime `json:"runtime"`
+	Genres  []string      `json:"genres"`
 }
 
 func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Request) {
@@ -90,10 +90,18 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	movie.Title = input.Title
-	movie.Year = input.Year
-	movie.Runtime = input.Runtime
-	movie.Genres = input.Genres
+	if input.Title != nil {
+		movie.Title = *input.Title
+	}
+	if input.Year != nil {
+		movie.Year = *input.Year
+	}
+	if input.Runtime != nil {
+		movie.Runtime = *input.Runtime
+	}
+	if input.Genres != nil {
+		movie.Genres = input.Genres // Note that we don't need to dereference a slice.
+	}
 
 	if err := app.validateMovie(w, r, movie); err != nil {
 		app.failedValidationResponse(w, r, err)
@@ -142,9 +150,9 @@ func readMovieJSONfromRequest(w http.ResponseWriter, r *http.Request) (*movieDat
 
 func adaptInputToMovieType(input *movieDataFromUser) *data.Movie {
 	return &data.Movie{
-		Title:   input.Title,
-		Year:    input.Year,
-		Runtime: input.Runtime,
+		Title:   *input.Title,
+		Year:    *input.Year,
+		Runtime: *input.Runtime,
 		Genres:  input.Genres,
 	}
 }
